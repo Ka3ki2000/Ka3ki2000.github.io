@@ -1,164 +1,219 @@
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
-
-canvas.width = 1000;
+canvas.width = 800;
 canvas.height = 600;
 
-const keys = {};
-let player = {
-    x: 500,
-    y: 300,
-    size: 40,
-    color: 'blue',
-    speed: 4,
-    money: 0
-};
-
+let keys = {};
 let bullets = [];
 let enemies = [];
-let objects = [];
+let powerUps = [];
+let money = 0;
+let equippedGun = 'default';
+let equippedSkin = 'default';
+let lastShotTime = 0;
+let gameRunning = false;
+let showShop = false;
 
-function spawnEnemy() {
-    enemies.push({
-        x: Math.random() * 2000 - 1000,
-        y: Math.random() * 2000 - 1000,
-        size: 40,
-        color: 'red',
-        alive: true
-    });
-}
+const player = {
+    x: 400,
+    y: 300,
+    width: 30,
+    height: 30,
+    color: 'green',
+    speed: 5,
+    vy: 0,
+    gravity: 1,
+    jumpForce: -15,
+    canJump: true
+};
 
-function spawnObjects() {
-    for (let i = 0; i < 50; i++) {
-        objects.push({
-            x: Math.random() * 2000 - 1000,
-            y: Math.random() * 2000 - 1000,
-            type: Math.random() > 0.5 ? 'tree' : 'house'
-        });
+class Bullet {
+    constructor(x, y, angle) {
+        this.x = x;
+        this.y = y;
+        this.speed = 10;
+        this.angle = angle;
+        this.size = 5;
+    }
+    update() {
+        this.x += Math.cos(this.angle) * this.speed;
+        this.y += Math.sin(this.angle) * this.speed;
+    }
+    draw() {
+        ctx.fillStyle = 'black';
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+        ctx.fill();
     }
 }
 
-spawnObjects();
-setInterval(spawnEnemy, 3000);
-
-window.addEventListener('keydown', e => keys[e.key] = true);
-window.addEventListener('keyup', e => keys[e.key] = false);
-
-canvas.addEventListener('click', e => {
-    bullets.push({
-        x: player.x,
-        y: player.y,
-        dx: Math.cos(0) * 10,
-        dy: Math.sin(0) * 10
-    });
-});
-
-function updatePlayer() {
-    if (keys['w']) player.y -= player.speed;
-    if (keys['s']) player.y += player.speed;
-    if (keys['a']) player.x -= player.speed;
-    if (keys['d']) player.x += player.speed;
+class Enemy {
+    constructor(x, y) {
+        this.x = x;
+        this.y = y;
+        this.width = 30;
+        this.height = 30;
+        this.color = 'red';
+        this.speed = 1.5;
+        this.health = 1;
+    }
+    update() {
+        const dx = player.x - this.x;
+        const dy = player.y - this.y;
+        const dist = Math.hypot(dx, dy);
+        if (dist > 1) {
+            this.x += (dx / dist) * this.speed;
+            this.y += (dy / dist) * this.speed;
+        }
+    }
+    draw() {
+        ctx.fillStyle = this.color;
+        ctx.fillRect(this.x, this.y, this.width, this.height);
+    }
 }
 
-function updateBullets() {
-    bullets.forEach(bullet => {
-        bullet.x += bullet.dx;
-        bullet.y += bullet.dy;
-    });
-    bullets = bullets.filter(b => b.x > -2000 && b.x < 2000 && b.y > -2000 && b.y < 2000);
+class PowerUp {
+    constructor(x, y) {
+        this.x = x;
+        this.y = y;
+        this.size = 20;
+        this.color = 'yellow';
+    }
+    draw() {
+        ctx.fillStyle = this.color;
+        ctx.fillRect(this.x, this.y, this.size, this.size);
+    }
 }
 
-function checkCollisions() {
-    bullets.forEach((bullet, bIndex) => {
-        enemies.forEach((enemy, eIndex) => {
-            if (enemy.alive && Math.hypot(bullet.x - enemy.x, bullet.y - enemy.y) < enemy.size) {
-                enemy.alive = false;
+function spawnEnemies() {
+    while (enemies.length < 5) {
+        const x = Math.random() * 2000 - 1000;
+        const y = Math.random() * 2000 - 1000;
+        enemies.push(new Enemy(x, y));
+    }
+}
+
+function spawnPowerUps() {
+    if (powerUps.length < 3 && Math.random() < 0.01) {
+        const x = Math.random() * 2000 - 1000;
+        const y = Math.random() * 2000 - 1000;
+        powerUps.push(new PowerUp(x, y));
+    }
+}
+
+function gameLoop() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    if (keys['KeyW']) player.y -= player.speed;
+    if (keys['KeyS']) player.y += player.speed;
+    if (keys['KeyA']) player.x -= player.speed;
+    if (keys['KeyD']) player.x += player.speed;
+
+    player.vy += player.gravity;
+    player.y += player.vy;
+
+    if (player.y > 300) {
+        player.y = 300;
+        player.vy = 0;
+        player.canJump = true;
+    }
+
+    bullets.forEach((bullet, index) => {
+        bullet.update();
+        bullet.draw();
+        if (bullet.x < 0 || bullet.y < 0 || bullet.x > canvas.width || bullet.y > canvas.height) {
+            bullets.splice(index, 1);
+        }
+    });
+
+    enemies.forEach((enemy, eIndex) => {
+        enemy.update();
+        enemy.draw();
+        bullets.forEach((bullet, bIndex) => {
+            if (bullet.x > enemy.x && bullet.x < enemy.x + enemy.width && bullet.y > enemy.y && bullet.y < enemy.y + enemy.height) {
                 bullets.splice(bIndex, 1);
-                player.money += 20;
+                enemies.splice(eIndex, 1);
+                money += 20;
             }
         });
     });
 
-    enemies = enemies.filter(e => e.alive);
-}
-
-function drawFloor() {
-    const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
-    gradient.addColorStop(0, "#6db3f2");
-    gradient.addColorStop(1, "#1e3c72");
-    ctx.fillStyle = gradient;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-}
-
-function drawObjects() {
-    objects.forEach(obj => {
-        const dx = obj.x - player.x;
-        const dy = obj.y - player.y;
-        const scale = Math.max(0.5, 1 - dy / 1000);
-
-        if (obj.type === 'tree') {
-            ctx.fillStyle = 'green';
-            ctx.beginPath();
-            ctx.arc(canvas.width / 2 + dx, canvas.height / 2 + dy, 30 * scale, 0, Math.PI * 2);
-            ctx.fill();
-        } else if (obj.type === 'house') {
-            ctx.fillStyle = 'brown';
-            ctx.fillRect(canvas.width / 2 + dx - 30 * scale, canvas.height / 2 + dy - 30 * scale, 60 * scale, 60 * scale);
+    powerUps.forEach((powerUp, pIndex) => {
+        powerUp.draw();
+        if (player.x < powerUp.x + powerUp.size && player.x + player.width > powerUp.x && player.y < powerUp.y + powerUp.size && player.y + player.height > powerUp.y) {
+            powerUps.splice(pIndex, 1);
+            money += 50;
         }
     });
-}
 
-function drawEnemies() {
-    enemies.forEach(enemy => {
-        const dx = enemy.x - player.x;
-        const dy = enemy.y - player.y;
-        const scale = Math.max(0.5, 1 - dy / 1000);
-
-        ctx.fillStyle = enemy.color;
-        ctx.beginPath();
-        ctx.arc(canvas.width / 2 + dx, canvas.height / 2 + dy, enemy.size * 0.5 * scale, 0, Math.PI * 2);
-        ctx.fill();
-    });
-}
-
-function drawPlayer() {
     ctx.fillStyle = player.color;
-    ctx.beginPath();
-    ctx.arc(canvas.width / 2, canvas.height / 2, player.size * 0.5, 0, Math.PI * 2);
-    ctx.fill();
-}
+    ctx.fillRect(canvas.width / 2 - player.width / 2, canvas.height / 2 - player.height / 2, player.width, player.height);
 
-function drawBullets() {
-    bullets.forEach(bullet => {
-        const dx = bullet.x - player.x;
-        const dy = bullet.y - player.y;
+    ctx.fillStyle = 'black';
+    ctx.fillText('Money: $' + money, 10, 20);
 
-        ctx.fillStyle = 'yellow';
-        ctx.beginPath();
-        ctx.arc(canvas.width / 2 + dx, canvas.height / 2 + dy, 5, 0, Math.PI * 2);
-        ctx.fill();
-    });
-}
-
-function drawHUD() {
-    ctx.fillStyle = 'white';
-    ctx.font = '20px Arial';
-    ctx.fillText(`Money: $${player.money}`, 20, 30);
-}
-
-function gameLoop() {
-    updatePlayer();
-    updateBullets();
-    checkCollisions();
-
-    drawFloor();
-    drawObjects();
-    drawEnemies();
-    drawPlayer();
-    drawBullets();
-    drawHUD();
+    spawnEnemies();
+    spawnPowerUps();
 
     requestAnimationFrame(gameLoop);
 }
 
-gameLoop();
+window.addEventListener('keydown', e => {
+    keys[e.code] = true;
+    if (e.code === 'Space' && player.canJump) {
+        player.vy = player.jumpForce;
+        player.canJump = false;
+    }
+});
+window.addEventListener('keyup', e => {
+    keys[e.code] = false;
+});
+window.addEventListener('mousedown', e => {
+    if (e.button === 0 && gameRunning) {
+        const now = Date.now();
+        let fireRate = equippedGun === 'fast' ? 150 : 400;
+        if (now - lastShotTime > fireRate) {
+            const angle = Math.atan2(e.clientY - canvas.height / 2, e.clientX - canvas.width / 2);
+            bullets.push(new Bullet(player.x, player.y, angle));
+            lastShotTime = now;
+        }
+    }
+});
+
+function startGame() {
+    document.getElementById('homeScreen').style.display = 'none';
+    document.getElementById('shopScreen').style.display = 'none';
+    gameRunning = true;
+    gameLoop();
+}
+
+function openShop() {
+    document.getElementById('homeScreen').style.display = 'none';
+    document.getElementById('shopScreen').style.display = 'flex';
+}
+
+function closeShop() {
+    document.getElementById('shopScreen').style.display = 'none';
+    document.getElementById('homeScreen').style.display = 'flex';
+}
+
+function buyGun() {
+    if (money >= 100) {
+        money -= 100;
+        equippedGun = 'fast';
+        alert('You bought and equipped a faster gun!');
+    } else {
+        alert('Not enough money!');
+    }
+}
+
+function buySkin() {
+    if (money >= 150) {
+        money -= 150;
+        equippedSkin = 'blue';
+        player.color = 'blue';
+        alert('You bought and equipped a blue skin!');
+    } else {
+        alert('Not enough money!');
+    }
+}
