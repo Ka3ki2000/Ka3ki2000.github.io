@@ -1,103 +1,18 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Food Menu</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background-color: #f8f9fa;
-      color: #333;
-      margin: 0;
-      padding: 0;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-    }
-    h1 {
-      font-size: 3rem;
-      margin-top: 20px;
-      text-align: center;
-      color: #2c3e50;
-    }
-    .menu {
-      width: 100%;
-      max-width: 600px;
-      margin-top: 30px;
-      padding: 10px;
-    }
-    .category {
-      background-color: #3498db;
-      color: white;
-      padding: 10px;
-      font-size: 1.5rem;
-      border-radius: 5px;
-      margin-bottom: 10px;
-      text-align: center;
-    }
-    .item-list {
-      background-color: white;
-      padding: 10px;
-      border-radius: 5px;
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    }
-    .item {
-      padding: 10px;
-      border-bottom: 1px solid #eee;
-      font-size: 1.2rem;
-    }
-    .item:last-child {
-      border-bottom: none;
-    }
-    .item:hover {
-      background-color: #ecf0f1;
-      cursor: pointer;
-    }
-    .item:active {
-      background-color: #bdc3c7;
-    }
-    @media screen and (max-width: 768px) {
-      h1 {
-        font-size: 2rem;
-      }
-      .category {
-        font-size: 1.2rem;
-      }
-      .item {
-        font-size: 1rem;
-      }
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Happy Shooter Game</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <h1>Food Menu</h1>
-  <div class="menu">
-    <!-- Drinks Section -->
-    <div class="category">Drinks🥤</div>
-    <div class="item-list">
-      <div class="item">Green Diet Cola</div>
-      <div class="item">Water</div>
-    </div>
+    <!-- Loading Screen -->
+    <div id="loadingScreen">Loading Game...</div>
+    
+    <!-- Game Canvas -->
+    <canvas id="gameCanvas" width="800" height="600"></canvas>
 
-    <!-- Sandwiches Section -->
-    <div class="category">Sandwiches🥪</div>
-    <div class="item-list">
-      <div class="item">Cheese Sandwich</div>
-      <div class="item">Zaatar Sandwich</div>
-      <div class="item">Sibling Special🎁</div>
-      <div class="item">Lotus Sandwich</div>
-    </div>
-
-    <!-- Snacks Section -->
-    <div class="category">Snacks</div>
-    <div class="item-list">
-      <div class="item">Fishfash</div>
-      <div class="item">Cheese Puff Bag</div>
-      <div class="item">Cheese Puff Bowl</div>
-      <div class="item">One Chip</div>
-      <div class="item">Mini Lime🍋‍🟩</div>
-    </div>
-  </div>
+    <script src="game.js" defer></script>
 </body>
 </html>
